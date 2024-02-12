@@ -1,5 +1,7 @@
 import { Plugin, App} from 'obsidian';
 
+const UNIQUE_NOTE_TEMPLATE = "Unique Note Inbox Template";
+
 function open_inbox_note(app: App) {
 	// const files = this.app.vault.getMarkdownFiles();
 	const files = app.vault.getMarkdownFiles();
@@ -38,6 +40,28 @@ function open_inbox_note(app: App) {
 	})
 }
 
+async function unique_note(app: App) {
+	let name = Math.trunc(new Date().getTime()/1000).toString().substring(3);
+
+	const file = app.vault.getMarkdownFiles().find(
+		f => f.basename == UNIQUE_NOTE_TEMPLATE);
+
+	if (file == null) {
+		console.log("Can't find: ", UNIQUE_NOTE_TEMPLATE);
+		return null;
+	}
+
+	let contents = await app.vault.cachedRead(file);
+	let currentDate = new Date().toISOString().slice(0, 10);
+	contents = contents.replace(/{{date}}/g, currentDate);
+	console.log(contents);
+
+	let newFile = await app.vault.create(`${name}.md`, contents);
+	app.workspace.openLinkText(newFile.basename, "", false, {
+		active: true,
+	});
+}
+
 export default class EthanUtil extends Plugin {
 	async onload() {
 		this.addCommand({
@@ -57,6 +81,14 @@ export default class EthanUtil extends Plugin {
 				if (file !== null) {
 					this.app.vault.trash(file, false);
 				}
+			}
+		});
+
+		this.addCommand({
+			id: 'ethan:unique-note',
+			name: 'Ethan Unique Note',
+			callback: () => {
+				unique_note(this.app);
 			}
 		});
 	}
