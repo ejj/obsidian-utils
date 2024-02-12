@@ -54,10 +54,9 @@ async function unique_note(app: App) {
 	let contents = await app.vault.cachedRead(file);
 	let currentDate = new Date().toISOString().slice(0, 10);
 	contents = contents.replace(/{{date}}/g, currentDate);
-	console.log(contents);
 
 	let newFile = await app.vault.create(`${name}.md`, contents);
-	app.workspace.openLinkText(newFile.basename, "", false, {
+	await app.workspace.openLinkText(newFile.basename, "", false, {
 		active: true,
 	});
 }
@@ -91,9 +90,17 @@ export default class EthanUtil extends Plugin {
 				unique_note(this.app);
 			}
 		});
+
+		this.addCommand({
+			id: 'ethan:unique-task',
+			name: 'Ethan Unique Task',
+			callback: async () => {
+				await unique_note(this.app);
+				(this.app as any).commands.
+					executeCommandById("obsidian-tasks-plugin:edit-task");
+			}
+		});
 	}
 
 	onunload() {}
 }
-
-
