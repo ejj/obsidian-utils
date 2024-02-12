@@ -1,4 +1,4 @@
-import { Plugin, App} from 'obsidian';
+import { Plugin, App, MarkdownView} from 'obsidian';
 
 const UNIQUE_NOTE_TEMPLATE = "Unique Note Inbox Template";
 
@@ -59,13 +59,21 @@ async function unique_note(app: App) {
 	await app.workspace.openLinkText(newFile.basename, "", false, {
 		active: true,
 	});
+
+
+	const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+	if (view == null) {
+		return
+	}
+	console.log("here");
+	view.editor.focus();
 }
 
 export default class EthanUtil extends Plugin {
 	async onload() {
 		this.addCommand({
 			id: 'ethan:inbox-next',
-			name: 'Next Inbox Note',
+			name: 'Next Inbox',
 			callback: () => {
 				open_inbox_note(this.app);
 			},
@@ -73,7 +81,7 @@ export default class EthanUtil extends Plugin {
 
 		this.addCommand({
 			id: 'ethan:delete-inbox-next',
-			name: 'Delete and Next Inbox Note',
+			name: 'Delete and Next Inbox',
 			callback: () => {
 				let file = this.app.workspace.getActiveFile();
 				open_inbox_note(this.app);
@@ -85,7 +93,7 @@ export default class EthanUtil extends Plugin {
 
 		this.addCommand({
 			id: 'ethan:unique-note',
-			name: 'Ethan Unique Note',
+			name: 'Unique Note',
 			callback: () => {
 				unique_note(this.app);
 			}
@@ -93,7 +101,7 @@ export default class EthanUtil extends Plugin {
 
 		this.addCommand({
 			id: 'ethan:unique-task',
-			name: 'Ethan Unique Task',
+			name: 'Unique Task',
 			callback: async () => {
 				await unique_note(this.app);
 				(this.app as any).commands.
