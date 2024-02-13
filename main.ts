@@ -41,7 +41,9 @@ function open_inbox_note(app: App) {
 }
 
 async function unique_note(app: App) {
-	let name = Math.trunc(new Date().getTime()/1000).toString().substring(3);
+	let currentDate = new Date().toISOString().slice(0, 10);
+	let stamp = Math.random().toString(36).substring(9).toUpperCase();
+	let name = `${currentDate} ${stamp}.md`;
 
 	const file = app.vault.getMarkdownFiles().find(
 		f => f.basename == UNIQUE_NOTE_TEMPLATE);
@@ -52,14 +54,12 @@ async function unique_note(app: App) {
 	}
 
 	let contents = await app.vault.cachedRead(file);
-	let currentDate = new Date().toISOString().slice(0, 10);
 	contents = contents.replace(/{{date}}/g, currentDate);
 
-	let newFile = await app.vault.create(`${name}.md`, contents);
+	let newFile = await app.vault.create(name, contents);
 	await app.workspace.openLinkText(newFile.basename, "", false, {
 		active: true,
 	});
-
 
 	const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 	if (view == null) {
@@ -71,43 +71,50 @@ async function unique_note(app: App) {
 
 export default class EthanUtil extends Plugin {
 	async onload() {
+		// Inbox Next
+		const inbox_next_cb =  () => {
+			open_inbox_note(this.app);
+		};
+
 		this.addCommand({
 			id: 'ethan:inbox-next',
 			name: 'Next Inbox',
-			callback: () => {
-				open_inbox_note(this.app);
-			},
+			callback: inbox_next_cb,
 		});
+		this.addRibbonIcon("mails", "Next Inbox", inbox_next_cb);
+
+
+		// Delete and Inbox Next
+		const delete_inbox_next_cb = () => {
+			let file = this.app.workspace.getActiveFile();
+			open_inbox_note(this.app);
+			if (file !== null) {
+				this.app.vault.trash(file, false);
+			}
+		}
 
 		this.addCommand({
 			id: 'ethan:delete-inbox-next',
-			name: 'Delete and Next Inbox',
-			callback: () => {
-				let file = this.app.workspace.getActiveFile();
-				open_inbox_note(this.app);
-				if (file !== null) {
-					this.app.vault.trash(file, false);
-				}
-			}
+			name: 'Delete',
+			callback: delete_inbox_next_cb,
 		});
+		this.addRibbonIcon("trash",
+						   "Delete, Open Inbox", delete_inbox_next_cb);
+
+
+	   // Unique Note
+	   const unique_note_cb = () => {
+		   unique_note(this.app);
+	   }
 
 		this.addCommand({
 			id: 'ethan:unique-note',
-			name: 'Unique Note',
-			callback: () => {
-				unique_note(this.app);
-			}
+			name: 'New Note',
+			callback: unique_note_cb
 		});
 
-		this.addCommand({
-			id: 'ethan:unique-task',
-			name: 'Unique Task',
-			callback: async () => {
-				await unique_note(this.app);
-				(this.app as any).commands.
-					executeCommandById("obsidian-tasks-plugin:edit-task");
-			}
-		});
+		this.addRibbonIcon("file-plus-2",
+						   "Create Unique note", unique_note_cb);
 	}
 
 	onunload() {}
