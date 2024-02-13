@@ -1,4 +1,4 @@
-import { Plugin, App, MarkdownView} from 'obsidian';
+import { Plugin, App, MarkdownView, Notice} from 'obsidian';
 
 const UNIQUE_NOTE_TEMPLATE = "Unique Note Inbox Template";
 
@@ -69,6 +69,25 @@ async function unique_note(app: App) {
 	view.editor.focus();
 }
 
+async function copy_markdown(app: App) {
+	let file = app.workspace.getActiveFile();
+	if (file == null) {
+		return;
+	}
+
+	let contents = await app.vault.cachedRead(file);
+	contents = contents.replace(/^---[\s\S]*?---/, "");
+	contents = contents.replace(/^[\s\S]*%%\s*?\-\-\-\s*?%%/, "");
+	contents = contents.replace(/\[\[(.*?)\|(.*?)\]\]/g, "$2");
+	contents = contents.replace(/\[\[(.*?)\]\]/g, "$1");
+	contents = contents.replace(/%%[\s\S]*?%%/g, "");
+	contents = contents.replace(/^\s*/, "");
+	contents = contents.replace(/\s*$/, "");
+
+	await navigator.clipboard.writeText(contents);
+	new Notice(contents);
+}
+
 export default class EthanUtil extends Plugin {
 	async onload() {
 		// Inbox Next
@@ -85,7 +104,7 @@ export default class EthanUtil extends Plugin {
 
 
 		// Delete and Inbox Next
-		const delete_inbox_next_cb = () => {
+		const delete_inbox_cb = () => {
 			let file = this.app.workspace.getActiveFile();
 			open_inbox_note(this.app);
 			if (file !== null) {
@@ -96,25 +115,32 @@ export default class EthanUtil extends Plugin {
 		this.addCommand({
 			id: 'ethan:delete-inbox-next',
 			name: 'Delete',
-			callback: delete_inbox_next_cb,
+			callback: delete_inbox_cb,
 		});
-		this.addRibbonIcon("trash",
-						   "Delete, Open Inbox", delete_inbox_next_cb);
+		this.addRibbonIcon("trash", "Delete, Open Inbox", delete_inbox_cb);
 
 
-	   // Unique Note
-	   const unique_note_cb = () => {
-		   unique_note(this.app);
-	   }
-
+		// Unique Note
+		const new_note_cb = () => {
+			unique_note(this.app);
+		}
 		this.addCommand({
 			id: 'ethan:unique-note',
 			name: 'New Note',
-			callback: unique_note_cb
+			callback: new_note_cb,
 		});
 
-		this.addRibbonIcon("file-plus-2",
-						   "Create Unique note", unique_note_cb);
+		this.addRibbonIcon("file-plus-2", "Create Unique note", new_note_cb);
+
+		// Copy Markdown
+		const copy_markdown_cb = () => {
+			copy_markdown(this.app);
+		}
+		this.addCommand({
+			id: 'ethan:copy-markdown',
+			name: 'Copy Markdown',
+			callback: copy_markdown_cb,
+		});
 	}
 
 	onunload() {}
