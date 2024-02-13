@@ -10,8 +10,10 @@ function open_inbox_note(app: App) {
 	for (const file of files) {
 		let fileCache = app.metadataCache.getFileCache(file);
 		let tags = fileCache?.tags?.map(tagCache => tagCache.tag) || [];
-		let fmtags = fileCache?.frontmatter?.tags?.map((t :string) => `#${t}`);
-		tags.push(...fmtags || []);
+		let tags_array = fileCache?.frontmatter?.tags;
+		if (Array.isArray(tags_array)) {
+			tags.push(...tags_array.map((t :string) => `#${t}`) || []);
+		}
 
 		if (tags.includes("#inbox")
 			&& file.path.search("Templates") == -1) {
