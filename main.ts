@@ -1,4 +1,4 @@
-import { Plugin, App, MarkdownView, Notice} from 'obsidian';
+import { Plugin, App, MarkdownView, Notice, getAllTags, parseFrontMatterTags} from 'obsidian';
 
 const UNIQUE_NOTE_TEMPLATE = "Unique Note Inbox Template";
 
@@ -8,11 +8,14 @@ function open_inbox_note(app: App) {
 
 	let inboxFiles = [];
 	for (const file of files) {
-		let fileCache = app.metadataCache.getFileCache(file);
-		let tags = fileCache?.tags?.map(tagCache => tagCache.tag) || [];
-		let tags_array = fileCache?.frontmatter?.tags;
-		if (Array.isArray(tags_array)) {
-			tags.push(...tags_array.map((t :string) => `#${t}`) || []);
+		const mc = app.metadataCache.getFileCache(file);
+		if (mc == null) {
+			return
+		}
+
+		let tags = getAllTags(mc);
+		if (tags == null) {
+			return
 		}
 
 		if (tags.includes("#inbox")
@@ -90,6 +93,24 @@ async function copy_markdown(app: App) {
 	new Notice(contents);
 }
 
+function remove_from_inbox(app: App) {
+	let file = app.workspace.getActiveFile();
+	if (file == null) {
+		return;
+	}
+
+	app.fileManager.processFrontMatter(file, (fm: any) => {
+		let tags = parseFrontMatterTags(fm);
+		if (tags == null) {
+			return
+		}
+
+		tags = tags.filter((x :string) => x !== "#inbox");
+		fm.tags = tags;
+		return fm;
+	});
+}
+
 export default class EthanUtil extends Plugin {
 	async onload() {
 		// Inbox Next
@@ -99,7 +120,7 @@ export default class EthanUtil extends Plugin {
 
 		this.addCommand({
 			id: 'ethan:inbox-next',
-			name: 'Next Inbox',
+			name: 'Next inbox',
 			callback: inbox_next_cb,
 		});
 		this.addRibbonIcon("mails", "Next Inbox", inbox_next_cb);
@@ -112,7 +133,7 @@ export default class EthanUtil extends Plugin {
 			if (file !== null) {
 				this.app.vault.trash(file, false);
 			}
-		}
+		};
 
 		this.addCommand({
 			id: 'ethan:delete-inbox-next',
@@ -125,10 +146,10 @@ export default class EthanUtil extends Plugin {
 		// Unique Note
 		const new_note_cb = () => {
 			unique_note(this.app);
-		}
+		};
 		this.addCommand({
 			id: 'ethan:unique-note',
-			name: 'New Note',
+			name: 'New note',
 			callback: new_note_cb,
 		});
 
@@ -137,11 +158,21 @@ export default class EthanUtil extends Plugin {
 		// Copy Markdown
 		const copy_markdown_cb = () => {
 			copy_markdown(this.app);
-		}
+		};
 		this.addCommand({
 			id: 'ethan:copy-markdown',
-			name: 'Copy Markdown',
+			name: 'Copy markdown',
 			callback: copy_markdown_cb,
+		});
+
+		// Remove From Inbox
+		const remove_from_inbox_cb = () => {
+			remove_from_inbox(this.app);
+		};
+		this.addCommand({
+			id: 'ethan:remove-from-inbox',
+			name: 'Remove from inbox',
+			callback: remove_from_inbox_cb,
 		});
 	}
 
