@@ -70,8 +70,8 @@ async function unique_note(app: App) {
 	if (view == null) {
 		return
 	}
-	console.log("here");
 	view.editor.focus();
+
 }
 
 async function copy_markdown(app: App) {
