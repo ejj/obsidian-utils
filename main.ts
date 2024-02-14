@@ -93,7 +93,7 @@ async function copy_markdown(app: App) {
 	new Notice(contents);
 }
 
-function remove_from_inbox(app: App) {
+function toggle_inbox(app: App) {
 	let file = app.workspace.getActiveFile();
 	if (file == null) {
 		return;
@@ -105,7 +105,11 @@ function remove_from_inbox(app: App) {
 			return
 		}
 
-		tags = tags.filter((x :string) => x !== "#inbox");
+		if (tags.includes("#inbox")) {
+			tags = tags.filter((x :string) => x !== "#inbox");
+		} else {
+			tags.push("#inbox");
+		}
 		fm.tags = tags;
 		return fm;
 	});
@@ -165,14 +169,14 @@ export default class EthanUtil extends Plugin {
 			callback: copy_markdown_cb,
 		});
 
-		// Remove From Inbox
-		const remove_from_inbox_cb = () => {
-			remove_from_inbox(this.app);
+		// Toggle Inbox
+		const toggle_inbox_cb = () => {
+			toggle_inbox(this.app);
 		};
 		this.addCommand({
-			id: 'ethan:remove-from-inbox',
-			name: 'Remove from inbox',
-			callback: remove_from_inbox_cb,
+			id: 'ethan:toggle-inbox',
+			name: 'Toggle inbox',
+			callback: toggle_inbox_cb,
 		});
 	}
 
