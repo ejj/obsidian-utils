@@ -101,14 +101,13 @@ function toggle_inbox(app: App) {
 
 	app.fileManager.processFrontMatter(file, (fm: any) => {
 		let tags = parseFrontMatterTags(fm);
-		if (tags == null) {
-			return
-		}
 
-		if (tags.includes("#inbox")) {
-			tags = tags.filter((x :string) => x !== "#inbox");
-		} else {
+		if (tags == null) {
+			tags = ["#inbox"];
+		} else if (!tags.includes("#inbox")) {
 			tags.push("#inbox");
+		} else {
+			tags = tags.filter((x :string) => x !== "#inbox");
 		}
 		fm.tags = tags;
 		return fm;
