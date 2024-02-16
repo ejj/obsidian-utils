@@ -1,21 +1,20 @@
-import { Plugin, App, MarkdownView, Notice, getAllTags, parseFrontMatterTags} from 'obsidian';
+import { Plugin, App, MarkdownView, Notice, getAllTags, parseFrontMatterTags, TFolder, TFile} from 'obsidian';
 
 const UNIQUE_NOTE_TEMPLATE = "Unique Note Inbox Template";
 
 function open_inbox_note(app: App) {
-	// const files = this.app.vault.getMarkdownFiles();
 	const files = app.vault.getMarkdownFiles();
 
 	let inboxFiles = [];
 	for (const file of files) {
 		const mc = app.metadataCache.getFileCache(file);
 		if (mc == null) {
-			return
+			continue;
 		}
 
 		let tags = getAllTags(mc);
 		if (tags == null) {
-			return
+			continue;
 		}
 
 		if (tags.includes("#inbox")
@@ -25,6 +24,19 @@ function open_inbox_note(app: App) {
 	}
 
 	inboxFiles.sort(((a, b) => b.stat.ctime - a.stat.ctime));
+
+	let folder = app.vault.getAbstractFileByPath("Inbox");
+	let folderFiles = [];
+	if (folder instanceof TFolder) {
+		for (const f of folder.children) {
+			if (f instanceof TFile) {
+				folderFiles.push(f);
+			}
+		}
+	}
+
+	folderFiles.sort(((a, b) => b.stat.ctime - a.stat.ctime));
+	inboxFiles = [...inboxFiles, ...folderFiles];
 
 	if (inboxFiles.length == 0) {
 		return;
@@ -40,9 +52,7 @@ function open_inbox_note(app: App) {
 		index = (index + 1) % inboxFiles.length;
 	}
 
-	app.workspace.openLinkText(inboxFiles[index].basename, '', false, {
-		active: true,
-	})
+	app.workspace.getLeaf().openFile(inboxFiles[index]);
 }
 
 async function unique_note(app: App) {
@@ -62,9 +72,7 @@ async function unique_note(app: App) {
 	contents = contents.replace(/{{date}}/g, currentDate);
 
 	let newFile = await app.vault.create(name, contents);
-	await app.workspace.openLinkText(newFile.basename, "", false, {
-		active: true,
-	});
+	await app.workspace.getLeaf().openFile(newFile);
 
 	const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 	if (view == null) {
