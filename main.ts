@@ -23,20 +23,17 @@ function open_inbox_note(app: App) {
 		}
 	}
 
-	inboxFiles.sort(((a, b) => b.stat.ctime - a.stat.ctime));
 
 	let folder = app.vault.getAbstractFileByPath("Inbox");
-	let folderFiles = [];
 	if (folder instanceof TFolder) {
 		for (const f of folder.children) {
 			if (f instanceof TFile) {
-				folderFiles.push(f);
+				inboxFiles.push(f);
 			}
 		}
 	}
 
-	folderFiles.sort(((a, b) => b.stat.ctime - a.stat.ctime));
-	inboxFiles = [...inboxFiles, ...folderFiles];
+	inboxFiles.sort(((a, b) => b.stat.ctime - a.stat.ctime));
 
 	if (inboxFiles.length == 0) {
 		return;
