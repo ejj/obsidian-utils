@@ -1,6 +1,8 @@
 import { Plugin, App, MarkdownView, Notice, getAllTags, parseFrontMatterTags, TFolder, TFile} from 'obsidian';
 
 const UNIQUE_NOTE_TEMPLATE = "Unique Note Inbox Template";
+const UNIQUE_NOTE_PATH =
+	"00-09 💾 System/02 Obsidian Support/02.00 Floating Notes";
 
 function open_inbox_note(app: App) {
 	const files = app.vault.getMarkdownFiles();
@@ -23,8 +25,8 @@ function open_inbox_note(app: App) {
 		}
 	}
 
-
-	let folder = app.vault.getAbstractFileByPath("Inbox");
+	let folder = app.vault.getAbstractFileByPath(
+		"00-09 💾 System/01 Inbox/01.01 Inbox");
 	if (folder instanceof TFolder) {
 		for (const f of folder.children) {
 			if (f instanceof TFile) {
@@ -53,10 +55,6 @@ function open_inbox_note(app: App) {
 }
 
 async function unique_note(app: App) {
-	let currentDate = new Date().toISOString().slice(0, 10);
-	let stamp = Math.random().toString(36).substring(9).toUpperCase();
-	let name = `${currentDate} ${stamp}.md`;
-
 	const file = app.vault.getMarkdownFiles().find(
 		f => f.basename == UNIQUE_NOTE_TEMPLATE);
 
@@ -65,9 +63,12 @@ async function unique_note(app: App) {
 		return null;
 	}
 
+	let currentDate = new Date().toISOString().slice(0, 10);
 	let contents = await app.vault.cachedRead(file);
 	contents = contents.replace(/{{date}}/g, currentDate);
 
+	let stamp = Math.random().toString(36).substring(9).toUpperCase();
+	let name = `${UNIQUE_NOTE_PATH}/${currentDate} ${stamp}.md`;
 	let newFile = await app.vault.create(name, contents);
 	await app.workspace.getLeaf().openFile(newFile);
 
@@ -76,7 +77,6 @@ async function unique_note(app: App) {
 		return
 	}
 	view.editor.focus();
-
 }
 
 async function copy_markdown(app: App) {
