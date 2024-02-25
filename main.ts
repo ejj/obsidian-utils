@@ -3,6 +3,7 @@ import { Plugin, App, MarkdownView, Notice, getAllTags, parseFrontMatterTags, TF
 const UNIQUE_NOTE_TEMPLATE = "Unique Note Inbox Template";
 const UNIQUE_NOTE_PATH =
 	"00-09 💾 System/02 Obsidian Support/02.00 Floating Notes";
+const INBOX_PATH = "00-09 💾 System/01 Inbox/01.01 📥 Inbox";
 
 function open_inbox_note(app: App) {
 	const files = app.vault.getMarkdownFiles();
@@ -25,8 +26,7 @@ function open_inbox_note(app: App) {
 		}
 	}
 
-	let folder = app.vault.getAbstractFileByPath(
-		"00-09 💾 System/01 Inbox/01.01 Inbox");
+	let folder = app.vault.getAbstractFileByPath(INBOX_PATH);
 	if (folder instanceof TFolder) {
 		for (const f of folder.children) {
 			if (f instanceof TFile) {
