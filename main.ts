@@ -3,8 +3,8 @@ import { Plugin, App, MarkdownView, Notice, getAllTags, parseFrontMatterTags, TF
 const UNIQUE_NOTE_TEMPLATE = "Unique Note Inbox Template";
 const UNIQUE_NOTE_PATH =
     "00-09 💾 System/02 Obsidian/02.00 Notes";
-const INBOX_PATH = "70-79 Productivity/70 System/70.01 📥 Inbox";
-const TASKS_PATH = "70-79 Productivity/70 System/70.02 Tasks/Floating Tasks.md";
+const INBOX_PATH = "70-79 ☑️ Productivity/70 System/70.01 📥 Inbox";
+const TASKS_PATH = "70-79 ☑️ Productivity/70 System/70.02 Tasks/Floating Tasks.md";
 
 function open_inbox_note(app: App) {
     const files = app.vault.getMarkdownFiles();
