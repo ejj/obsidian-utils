@@ -1,8 +1,7 @@
 import { Plugin, App, MarkdownView, Notice, getAllTags, parseFrontMatterTags, TFolder, TFile } from 'obsidian';
 
-const UNIQUE_NOTE_TEMPLATE = "Unique Note Inbox Template";
-const UNIQUE_NOTE_PATH = "";
-const INBOX_PATH = "70-79 ☑️ Productivity/70 System/70.01 📥 Inbox";
+const BASIC_TEMPLATE = "Basic Template";
+const INBOX_PATH = "Inbox";
 const TASKS_PATH = "Tasks.md";
 
 function currentDate() {
@@ -12,10 +11,10 @@ function currentDate() {
 export default class EthanUtil extends Plugin {
 	async unique_note_contents() {
 		const file = this.app.vault.getMarkdownFiles().find(
-			f => f.basename == UNIQUE_NOTE_TEMPLATE);
+			f => f.basename == BASIC_TEMPLATE);
 
 		if (file == null) {
-			throw new Error("Can't find: " + UNIQUE_NOTE_TEMPLATE);
+			throw new Error("Can't find: " + BASIC_TEMPLATE);
 		}
 
 		let contents = await this.app.vault.cachedRead(file);
@@ -58,7 +57,7 @@ export default class EthanUtil extends Plugin {
 		}
 	}
 
-	append_task() {
+	async append_task() {
 		const editor = this.app.workspace.getActiveViewOfType(MarkdownView)?.editor;
 		if (editor == null) {
 			return
@@ -73,7 +72,7 @@ export default class EthanUtil extends Plugin {
 
 		const file = this.app.vault.getAbstractFileByPath(TASKS_PATH);
 		if (file instanceof TFile) {
-			this.app.vault.append(file, "\n" + lineContent);
+			await this.app.vault.append(file, "\n" + lineContent);
 		}
 	}
 
@@ -140,11 +139,14 @@ export default class EthanUtil extends Plugin {
 
 		let folder = this.app.vault.getAbstractFileByPath(INBOX_PATH);
 		if (folder instanceof TFolder) {
+			console.log("here 1")
 			for (const f of folder.children) {
 				if (f instanceof TFile) {
 					inboxFiles.push(f);
 				}
 			}
+		} else {
+			console.log("here")
 		}
 
 		inboxFiles.sort((a, b) => {
@@ -179,15 +181,15 @@ export default class EthanUtil extends Plugin {
 
 	async unique_note() {
 		const file = this.app.vault.getMarkdownFiles().find(
-			f => f.basename == UNIQUE_NOTE_TEMPLATE);
+			f => f.basename == BASIC_TEMPLATE);
 
 		if (file == null) {
-			console.log("Can't find: ", UNIQUE_NOTE_TEMPLATE);
+			console.log("Can't find: ", BASIC_TEMPLATE);
 			return null;
 		}
 
 		let stamp = Math.random().toString(36).substring(9).toUpperCase();
-		let name = `${UNIQUE_NOTE_PATH}/${currentDate()} ${stamp}.md`;
+		let name = `${currentDate()} ${stamp}.md`;
 		let contents = await this.unique_note_contents();
 		let newFile = await this.app.vault.create(name, contents);
 		await this.app.workspace.getLeaf().openFile(newFile);
@@ -208,13 +210,22 @@ export default class EthanUtil extends Plugin {
 	}
 
 	async onload() {
+		// Icon Names come from: https://lucide.dev/
 		const inbox_next_cb = () => this.open_inbox_note()
 		this.addCommand({
 			id: 'ethan:inbox-next',
 			name: 'Next inbox',
 			callback: inbox_next_cb,
 		});
-		this.addRibbonIcon("mails", "Next Inbox", inbox_next_cb);
+		this.addRibbonIcon("mails", "Next", inbox_next_cb);
+
+		const new_note_cb = () => this.unique_note()
+		this.addCommand({
+			id: 'ethan:unique-note',
+			name: 'New note',
+			callback: new_note_cb,
+		});
+		this.addRibbonIcon("file-plus-2", "Create", new_note_cb);
 
 		const delete_inbox_cb = () => this.delete_inbox()
 		this.addCommand({
@@ -224,20 +235,13 @@ export default class EthanUtil extends Plugin {
 		});
 		this.addRibbonIcon("trash", "Delete", delete_inbox_cb);
 
-		const new_note_cb = () => this.unique_note()
-		this.addCommand({
-			id: 'ethan:unique-note',
-			name: 'New note',
-			callback: new_note_cb,
-		});
-		this.addRibbonIcon("file-plus-2", "Create Unique note", new_note_cb);
-
+		const copy_markdown_cb = () => this.copy_markdown()
 		this.addCommand({
 			id: 'ethan:copy-markdown',
 			name: 'Copy markdown',
-			callback: () => this.copy_markdown()
+			callback: copy_markdown_cb,
 		});
-		// TODO add a ribbon icon for copy markdown
+		this.addRibbonIcon("clipboard-copy", "Copy", copy_markdown_cb);
 
 		this.addCommand({
 			id: 'ethan:toggle-inbox',
@@ -256,7 +260,6 @@ export default class EthanUtil extends Plugin {
 			name: 'Create Task',
 			callback: () => this.create_task()
 		});
-
 
 		this.app.workspace.onLayoutReady(() => {
 			this.registerEvent(this.app.vault.on('create', this.on_create, this));
