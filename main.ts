@@ -1,7 +1,7 @@
 import { Plugin, App, MarkdownView, Notice, getAllTags, parseFrontMatterTags, TFolder, TFile } from 'obsidian';
 
 const BASIC_TEMPLATE = "Basic Template";
-const INBOX_PATH = "Inbox";
+const INBOX_PATH = "📥 Inbox";
 const TASKS_PATH = "Tasks.md";
 
 function currentDate() {
