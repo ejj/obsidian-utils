@@ -5,23 +5,47 @@ const UNIQUE_NOTE_PATH = "";
 const INBOX_PATH = "70-79 ☑️ Productivity/70 System/70.01 📥 Inbox";
 const TASKS_PATH = "Tasks.md";
 
-//function on_create(file: TFile, app: App) {
-//	const templatesPlugin = this.app.plugins.plugins['templates'];
-//	if (!templatesPlugin || !templatesPlugin.enabled) {
-//		console.log('Templates plugin is not enabled');
-//		return;
-//	}
-//
-//	const templatesInstance = templatesPlugin.instance;
-//
-//	try {
-//		await templatesInstance.insertTemplate('Basic Template');
-//	} catch (error) {
-//		console.error('Error inserting template:', error);
-//	}
-//}
-//
+function currentDate() {
+	return new Date().toISOString().slice(0, 10);
+}
+
 export default class EthanUtil extends Plugin {
+	async unique_note_contents() {
+		const file = this.app.vault.getMarkdownFiles().find(
+			f => f.basename == UNIQUE_NOTE_TEMPLATE);
+
+		if (file == null) {
+			throw new Error("Can't find: " + UNIQUE_NOTE_TEMPLATE);
+		}
+
+		let contents = await this.app.vault.cachedRead(file);
+		contents = contents.replace(/{{date}}/g, currentDate());
+
+		return contents
+	}
+
+	async on_create(file: TFile) {
+		const new_contents = await this.unique_note_contents();
+
+		// This is a bit of a hack to resolve an issue on mobile.  When you
+		// share to obsidian and create a new file, obsidian will create the file
+		// and then use modify to replace its contents.  If we run
+		// concurrently, we could read the empty contents of the file, and then
+		// overwrite whatever they did.   To resolve this, we read our template,
+		// and then sleep for 10ms.  That gives just enough buffer to ensure that
+		// we're not clobbering the share.
+		await new Promise(resolve => setTimeout(resolve, 10));
+
+		const old_content = await this.app.vault.read(file);
+
+		// If it starts with frontmatter, don't add our template
+		if (/^---/.test(old_content)) {
+			return
+		}
+
+		this.app.vault.modify(file, new_contents + old_content)
+	}
+
 	async create_task() {
 		const plugin = this.app.plugins.plugins['obsidian-tasks-plugin']
 		const task = await plugin.apiV1.createTaskLineModal();
@@ -162,12 +186,9 @@ export default class EthanUtil extends Plugin {
 			return null;
 		}
 
-		let currentDate = new Date().toISOString().slice(0, 10);
-		let contents = await this.app.vault.cachedRead(file);
-		contents = contents.replace(/{{date}}/g, currentDate);
-
 		let stamp = Math.random().toString(36).substring(9).toUpperCase();
-		let name = `${UNIQUE_NOTE_PATH}/${currentDate} ${stamp}.md`;
+		let name = `${UNIQUE_NOTE_PATH}/${currentDate()} ${stamp}.md`;
+		let contents = await this.unique_note_contents();
 		let newFile = await this.app.vault.create(name, contents);
 		await this.app.workspace.getLeaf().openFile(newFile);
 
@@ -237,9 +258,9 @@ export default class EthanUtil extends Plugin {
 		});
 
 
-		//this.app.workspace.onLayoutReady(() => {
-		//	this.registerEvent(this.app.vault.on('create', this.onCreate, this));
-		//});
+		this.app.workspace.onLayoutReady(() => {
+			this.registerEvent(this.app.vault.on('create', this.on_create, this));
+		});
 
 	}
 
