@@ -1,174 +1,193 @@
 import { Plugin, App, MarkdownView, Notice, getAllTags, parseFrontMatterTags, TFolder, TFile } from 'obsidian';
-import { exec } from 'child_process';
 
 const UNIQUE_NOTE_TEMPLATE = "Unique Note Inbox Template";
 const UNIQUE_NOTE_PATH = "";
 const INBOX_PATH = "70-79 ☑️ Productivity/70 System/70.01 📥 Inbox";
 const TASKS_PATH = "Tasks.md";
 
-function open_inbox_note(app: App) {
-	const files = app.vault.getMarkdownFiles();
+//function on_create(file: TFile, app: App) {
+//	const templatesPlugin = this.app.plugins.plugins['templates'];
+//	if (!templatesPlugin || !templatesPlugin.enabled) {
+//		console.log('Templates plugin is not enabled');
+//		return;
+//	}
+//
+//	const templatesInstance = templatesPlugin.instance;
+//
+//	try {
+//		await templatesInstance.insertTemplate('Basic Template');
+//	} catch (error) {
+//		console.error('Error inserting template:', error);
+//	}
+//}
+//
+export default class EthanUtil extends Plugin {
+	async create_task() {
+		const plugin = this.app.plugins.plugins['obsidian-tasks-plugin']
+		const task = await plugin.apiV1.createTaskLineModal();
+		const file = this.app.vault.getAbstractFileByPath(TASKS_PATH);
 
-	let inboxFiles = [];
-	for (const file of files) {
-		const mc = app.metadataCache.getFileCache(file);
-		if (mc == null) {
-			continue;
-		}
-
-		let tags = getAllTags(mc);
-		if (tags == null) {
-			continue;
-		}
-
-		if (tags.includes("#inbox")
-			&& file.path.search("Templates") == -1) {
-			inboxFiles.push(file);
+		if (file instanceof TFile) {
+			this.app.vault.append(file, "\n" + task);
+		} else {
+			console.log("failed to find file for create_task")
 		}
 	}
 
-	let folder = app.vault.getAbstractFileByPath(INBOX_PATH);
-	if (folder instanceof TFolder) {
-		for (const f of folder.children) {
-			if (f instanceof TFile) {
-				inboxFiles.push(f);
+	append_task() {
+		const editor = this.app.workspace.getActiveViewOfType(MarkdownView)?.editor;
+		if (editor == null) {
+			return
+		}
+
+		const cursor = editor.getCursor();
+		const lineContent = editor.getLine(cursor.line);
+
+		editor.replaceRange("",
+			{ line: cursor.line, ch: 0 },
+			{ line: cursor.line + 1, ch: 0 });
+
+		const file = this.app.vault.getAbstractFileByPath(TASKS_PATH);
+		if (file instanceof TFile) {
+			this.app.vault.append(file, "\n" + lineContent);
+		}
+	}
+
+	toggle_inbox() {
+		let file = this.app.workspace.getActiveFile();
+		if (file == null) {
+			return;
+		}
+
+		this.app.fileManager.processFrontMatter(file, (fm: any) => {
+			let tags = parseFrontMatterTags(fm);
+
+			if (tags == null) {
+				tags = ["#inbox"];
+			} else if (!tags.includes("#inbox")) {
+				tags.push("#inbox");
+			} else {
+				tags = tags.filter((x: string) => x !== "#inbox");
+			}
+			fm.tags = tags;
+			return fm;
+		});
+	}
+
+	async copy_markdown() {
+		let file = this.app.workspace.getActiveFile();
+		if (file == null) {
+			return;
+		}
+
+		let contents = await this.app.vault.cachedRead(file);
+		contents = contents.replace(/^---[\s\S]*?---/, "");
+		contents = contents.replace(/^[\s\S]*%%\s*?\-\-\-\s*?%%/, "");
+		contents = contents.replace(/\[\[(.*?)\|(.*?)\]\]/g, "$2");
+		contents = contents.replace(/\[\[(.*?)\]\]/g, "$1");
+		contents = contents.replace(/%%[\s\S]*?%%/g, "");
+		contents = contents.replace(/^\s*/, "");
+		contents = contents.replace(/\s*$/, "");
+
+		await navigator.clipboard.writeText(contents);
+		new Notice(contents);
+	}
+
+	open_inbox_note() {
+		const files = this.app.vault.getMarkdownFiles();
+
+		let inboxFiles = [];
+		for (const file of files) {
+			const mc = this.app.metadataCache.getFileCache(file);
+			if (mc == null) {
+				continue;
+			}
+
+			let tags = getAllTags(mc);
+			if (tags == null) {
+				continue;
+			}
+
+			if (tags.includes("#inbox")
+				&& file.path.search("Templates") == -1) {
+				inboxFiles.push(file);
 			}
 		}
-	}
 
-	inboxFiles.sort((a, b) => {
-		// Check if files are markdown
-		const aIsMarkdown = a.extension === 'md';
-		const bIsMarkdown = b.extension === 'md';
-
-		// If one is markdown and the other isn't, prioritize markdown
-		if (aIsMarkdown && !bIsMarkdown) return -1;
-		if (!aIsMarkdown && bIsMarkdown) return 1;
-
-		// If both are markdown or both are not, sort by creation time
-		return b.stat.ctime - a.stat.ctime;
-	});
-
-	if (inboxFiles.length == 0) {
-		return;
-	}
-
-	let index = 0;
-	let activeFile = this.app.workspace.getActiveFile();
-	if (activeFile !== null) {
-		index = inboxFiles.findIndex(obj => obj == activeFile); // We want the next file.
-		if (index < 0) {
-			index = -1;
+		let folder = this.app.vault.getAbstractFileByPath(INBOX_PATH);
+		if (folder instanceof TFolder) {
+			for (const f of folder.children) {
+				if (f instanceof TFile) {
+					inboxFiles.push(f);
+				}
+			}
 		}
-		index = (index + 1) % inboxFiles.length;
-	}
 
-	app.workspace.getLeaf().openFile(inboxFiles[index]);
-}
+		inboxFiles.sort((a, b) => {
+			// Check if files are markdown
+			const aIsMarkdown = a.extension === 'md';
+			const bIsMarkdown = b.extension === 'md';
 
-async function unique_note(app: App) {
-	const file = app.vault.getMarkdownFiles().find(
-		f => f.basename == UNIQUE_NOTE_TEMPLATE);
+			// If one is markdown and the other isn't, prioritize markdown
+			if (aIsMarkdown && !bIsMarkdown) return -1;
+			if (!aIsMarkdown && bIsMarkdown) return 1;
 
-	if (file == null) {
-		console.log("Can't find: ", UNIQUE_NOTE_TEMPLATE);
-		return null;
-	}
+			// If both are markdown or both are not, sort by creation time
+			return b.stat.ctime - a.stat.ctime;
+		});
 
-	let currentDate = new Date().toISOString().slice(0, 10);
-	let contents = await app.vault.cachedRead(file);
-	contents = contents.replace(/{{date}}/g, currentDate);
-
-	let stamp = Math.random().toString(36).substring(9).toUpperCase();
-	let name = `${UNIQUE_NOTE_PATH}/${currentDate} ${stamp}.md`;
-	let newFile = await app.vault.create(name, contents);
-	await app.workspace.getLeaf().openFile(newFile);
-
-	const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-	if (view == null) {
-		return
-	}
-	view.editor.focus();
-}
-
-async function copy_markdown(app: App) {
-	let file = app.workspace.getActiveFile();
-	if (file == null) {
-		return;
-	}
-
-	let contents = await app.vault.cachedRead(file);
-	contents = contents.replace(/^---[\s\S]*?---/, "");
-	contents = contents.replace(/^[\s\S]*%%\s*?\-\-\-\s*?%%/, "");
-	contents = contents.replace(/\[\[(.*?)\|(.*?)\]\]/g, "$2");
-	contents = contents.replace(/\[\[(.*?)\]\]/g, "$1");
-	contents = contents.replace(/%%[\s\S]*?%%/g, "");
-	contents = contents.replace(/^\s*/, "");
-	contents = contents.replace(/\s*$/, "");
-
-	await navigator.clipboard.writeText(contents);
-	new Notice(contents);
-}
-
-function toggle_inbox(app: App) {
-	let file = app.workspace.getActiveFile();
-	if (file == null) {
-		return;
-	}
-
-	app.fileManager.processFrontMatter(file, (fm: any) => {
-		let tags = parseFrontMatterTags(fm);
-
-		if (tags == null) {
-			tags = ["#inbox"];
-		} else if (!tags.includes("#inbox")) {
-			tags.push("#inbox");
-		} else {
-			tags = tags.filter((x: string) => x !== "#inbox");
+		if (inboxFiles.length == 0) {
+			return;
 		}
-		fm.tags = tags;
-		return fm;
-	});
-}
 
-function append_task(app: App) {
-	const editor = app.workspace.getActiveViewOfType(MarkdownView)?.editor;
-	if (editor == null) {
-		return
+		let index = 0;
+		let activeFile = this.app.workspace.getActiveFile();
+		if (activeFile !== null) {
+			index = inboxFiles.findIndex(obj => obj == activeFile); // We want the next file.
+			if (index < 0) {
+				index = -1;
+			}
+			index = (index + 1) % inboxFiles.length;
+		}
+
+		this.app.workspace.getLeaf().openFile(inboxFiles[index]);
 	}
 
-	const cursor = editor.getCursor();
-	const lineContent = editor.getLine(cursor.line);
+	async unique_note() {
+		const file = this.app.vault.getMarkdownFiles().find(
+			f => f.basename == UNIQUE_NOTE_TEMPLATE);
 
-	editor.replaceRange("",
-		{ line: cursor.line, ch: 0 },
-		{ line: cursor.line + 1, ch: 0 });
+		if (file == null) {
+			console.log("Can't find: ", UNIQUE_NOTE_TEMPLATE);
+			return null;
+		}
 
-	const file = app.vault.getAbstractFileByPath(TASKS_PATH);
-	if (file instanceof TFile) {
-		this.app.vault.append(file, "\n" + lineContent);
+		let currentDate = new Date().toISOString().slice(0, 10);
+		let contents = await this.app.vault.cachedRead(file);
+		contents = contents.replace(/{{date}}/g, currentDate);
+
+		let stamp = Math.random().toString(36).substring(9).toUpperCase();
+		let name = `${UNIQUE_NOTE_PATH}/${currentDate} ${stamp}.md`;
+		let newFile = await this.app.vault.create(name, contents);
+		await this.app.workspace.getLeaf().openFile(newFile);
+
+		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (view == null) {
+			return
+		}
+		view.editor.focus();
 	}
-}
 
-async function create_task(app: App) {
-	const plugin = this.app.plugins.plugins['obsidian-tasks-plugin']
-	const task = await plugin.apiV1.createTaskLineModal();
-	const file = app.vault.getAbstractFileByPath(TASKS_PATH);
-
-	if (file instanceof TFile) {
-		this.app.vault.append(file, "\n" + task);
-	} else {
-		console.log("failed to find file for create_task")
+	delete_inbox() {
+		let file = this.app.workspace.getActiveFile();
+		this.open_inbox_note();
+		if (file !== null) {
+			this.app.vault.trash(file, false);
+		}
 	}
-}
 
-export default class EthanUtil extends Plugin {
 	async onload() {
-		// Inbox Next
-		const inbox_next_cb = () => {
-			open_inbox_note(this.app);
-		};
-
+		const inbox_next_cb = () => this.open_inbox_note()
 		this.addCommand({
 			id: 'ethan:inbox-next',
 			name: 'Next inbox',
@@ -176,16 +195,7 @@ export default class EthanUtil extends Plugin {
 		});
 		this.addRibbonIcon("mails", "Next Inbox", inbox_next_cb);
 
-
-		// Delete and Inbox Next
-		const delete_inbox_cb = () => {
-			let file = this.app.workspace.getActiveFile();
-			open_inbox_note(this.app);
-			if (file !== null) {
-				this.app.vault.trash(file, false);
-			}
-		};
-
+		const delete_inbox_cb = () => this.delete_inbox()
 		this.addCommand({
 			id: 'ethan:delete-inbox-next',
 			name: 'Delete',
@@ -193,55 +203,44 @@ export default class EthanUtil extends Plugin {
 		});
 		this.addRibbonIcon("trash", "Delete", delete_inbox_cb);
 
-
-		// Unique Note
-		const new_note_cb = () => {
-			unique_note(this.app);
-		};
+		const new_note_cb = () => this.unique_note()
 		this.addCommand({
 			id: 'ethan:unique-note',
 			name: 'New note',
 			callback: new_note_cb,
 		});
-
 		this.addRibbonIcon("file-plus-2", "Create Unique note", new_note_cb);
 
-		// Copy Markdown
-		const copy_markdown_cb = () => {
-			copy_markdown(this.app);
-		};
 		this.addCommand({
 			id: 'ethan:copy-markdown',
 			name: 'Copy markdown',
-			callback: copy_markdown_cb,
+			callback: () => this.copy_markdown()
 		});
+		// TODO add a ribbon icon for copy markdown
 
-		// Toggle Inbox
-		const toggle_inbox_cb = () => {
-			toggle_inbox(this.app);
-		};
 		this.addCommand({
 			id: 'ethan:toggle-inbox',
 			name: 'Toggle inbox',
-			callback: toggle_inbox_cb,
+			callback: () => this.toggle_inbox()
 		});
 
-		// Append Task
-		const append_task_cb = () => {
-			append_task(this.app);
-		};
 		this.addCommand({
 			id: 'ethan:append-task',
 			name: 'Append Task',
-			callback: append_task_cb,
+			callback: () => this.append_task()
 		});
 
-		// Create Task
 		this.addCommand({
 			id: 'ethan:create-task',
 			name: 'Create Task',
-			callback: () => create_task(this.app),
+			callback: () => this.create_task()
 		});
+
+
+		//this.app.workspace.onLayoutReady(() => {
+		//	this.registerEvent(this.app.vault.on('create', this.onCreate, this));
+		//});
+
 	}
 
 	onunload() { }
