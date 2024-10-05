@@ -1,4 +1,5 @@
 import { Plugin, App, MarkdownView, Notice, getAllTags, parseFrontMatterTags, TFolder, TFile } from 'obsidian';
+import { exec } from 'child_process';
 
 const UNIQUE_NOTE_TEMPLATE = "Unique Note Inbox Template";
 const UNIQUE_NOTE_PATH = "";
@@ -149,6 +150,18 @@ function append_task(app: App) {
 	}
 }
 
+async function create_task(app: App) {
+	const plugin = this.app.plugins.plugins['obsidian-tasks-plugin']
+	const task = await plugin.apiV1.createTaskLineModal();
+	const file = app.vault.getAbstractFileByPath(TASKS_PATH);
+
+	if (file instanceof TFile) {
+		this.app.vault.append(file, "\n" + task);
+	} else {
+		console.log("failed to find file for create_task")
+	}
+}
+
 export default class EthanUtil extends Plugin {
 	async onload() {
 		// Inbox Next
@@ -178,7 +191,7 @@ export default class EthanUtil extends Plugin {
 			name: 'Delete',
 			callback: delete_inbox_cb,
 		});
-		this.addRibbonIcon("trash", "Delete, Open Inbox", delete_inbox_cb);
+		this.addRibbonIcon("trash", "Delete", delete_inbox_cb);
 
 
 		// Unique Note
@@ -213,6 +226,7 @@ export default class EthanUtil extends Plugin {
 			callback: toggle_inbox_cb,
 		});
 
+		// Append Task
 		const append_task_cb = () => {
 			append_task(this.app);
 		};
@@ -220,6 +234,13 @@ export default class EthanUtil extends Plugin {
 			id: 'ethan:append-task',
 			name: 'Append Task',
 			callback: append_task_cb,
+		});
+
+		// Create Task
+		this.addCommand({
+			id: 'ethan:create-task',
+			name: 'Create Task',
+			callback: () => create_task(this.app),
 		});
 	}
 
