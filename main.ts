@@ -14,11 +14,9 @@ function getFilesRecursive(folder: TFolder): TFile[] {
 	// Get all children (files and folders) in the current folder
 	folder.children.forEach((child) => {
 		if (child instanceof TFile) {
-			console.log("pushing")
 			// If it's a file, add it to the list
 			files.push(child);
 		} else if (child instanceof TFolder) {
-			console.log("recursing")
 			// If it's a folder, recursively get its files and add them to the list
 			files = files.concat(getFilesRecursive(child));
 		}
@@ -158,7 +156,6 @@ export default class EthanUtil extends Plugin {
 
 		let folder = this.app.vault.getAbstractFileByPath(INBOX_PATH);
 		if (folder instanceof TFolder) {
-			console.log("here")
 			inboxFiles = inboxFiles.concat(getFilesRecursive(folder))
 		}
 
