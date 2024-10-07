@@ -1,11 +1,30 @@
 import { Plugin, App, MarkdownView, Notice, getAllTags, parseFrontMatterTags, TFolder, TFile } from 'obsidian';
 
 const BASIC_TEMPLATE = "Basic Template";
-const INBOX_PATH = "📥 Inbox";
+const INBOX_PATH = "Inbox";
 const TASKS_PATH = "Tasks.md";
 
 function currentDate() {
 	return new Date().toISOString().slice(0, 10);
+}
+
+function getFilesRecursive(folder: TFolder): TFile[] {
+	let files: TFile[] = [];
+
+	// Get all children (files and folders) in the current folder
+	folder.children.forEach((child) => {
+		if (child instanceof TFile) {
+			console.log("pushing")
+			// If it's a file, add it to the list
+			files.push(child);
+		} else if (child instanceof TFolder) {
+			console.log("recursing")
+			// If it's a folder, recursively get its files and add them to the list
+			files = files.concat(getFilesRecursive(child));
+		}
+	});
+
+	return files;
 }
 
 export default class EthanUtil extends Plugin {
@@ -139,14 +158,8 @@ export default class EthanUtil extends Plugin {
 
 		let folder = this.app.vault.getAbstractFileByPath(INBOX_PATH);
 		if (folder instanceof TFolder) {
-			console.log("here 1")
-			for (const f of folder.children) {
-				if (f instanceof TFile) {
-					inboxFiles.push(f);
-				}
-			}
-		} else {
 			console.log("here")
+			inboxFiles = inboxFiles.concat(getFilesRecursive(folder))
 		}
 
 		inboxFiles.sort((a, b) => {
