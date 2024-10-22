@@ -41,6 +41,10 @@ export default class EthanUtil extends Plugin {
 	}
 
 	async on_create(file: TFile) {
+		if (file.extension !== 'md') {
+			return;
+		}
+
 		const new_contents = await this.unique_note_contents();
 
 		// This is a bit of a hack to resolve an issue on mobile.  When you
