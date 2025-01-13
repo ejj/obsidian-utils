@@ -68,14 +68,15 @@ export default class EthanUtil extends Plugin {
 
 	async create_task() {
 		const plugin = this.app.plugins.plugins['obsidian-tasks-plugin']
-		const task = await plugin.apiV1.createTaskLineModal();
 		const file = this.app.vault.getAbstractFileByPath(TASKS_PATH);
 
-		if (file instanceof TFile) {
-			this.app.vault.append(file, "\n" + task);
-		} else {
+		if (!(file instanceof TFile)) {
 			console.log("failed to find file for create_task")
+			return;
 		}
+
+		const task = await plugin.apiV1.createTaskLineModal();
+		this.app.vault.append(file, "\n" + task);
 	}
 
 	async append_task() {
