@@ -75,8 +75,11 @@ export default class EthanUtil extends Plugin {
 			return;
 		}
 
+		// On the boox just doing an append can corrupt the file.   Pulling in
+		// the content explicitly seems to work.
 		const task = await plugin.apiV1.createTaskLineModal();
-		this.app.vault.append(file, "\n" + task);
+		const content = await this.app.vault.read(file);
+		await this.app.vault.modify(file, content + "\n" + task);
 	}
 
 	async append_task() {
