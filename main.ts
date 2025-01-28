@@ -4,6 +4,8 @@ const BASIC_TEMPLATE = "Basic Template";
 const INBOX_PATH = "Inbox";
 const TASKS_PATH = "Tasks.md";
 
+var index = 0;
+
 function currentDate() {
 	return new Date().toISOString().slice(0, 10);
 }
@@ -184,16 +186,16 @@ export default class EthanUtil extends Plugin {
 			return;
 		}
 
-		let index = 0;
 		let activeFile = this.app.workspace.getActiveFile();
 		if (activeFile !== null) {
 			index = inboxFiles.findIndex(obj => obj == activeFile); // We want the next file.
 			if (index < 0) {
 				index = -1;
 			}
-			index = (index + 1) % inboxFiles.length;
+			index++;
 		}
 
+		index = index % inboxFiles.length;
 		this.app.workspace.getLeaf().openFile(inboxFiles[index]);
 	}
 
