@@ -188,14 +188,13 @@ export default class EthanUtil extends Plugin {
 
 		let activeFile = this.app.workspace.getActiveFile();
 		if (activeFile !== null) {
-			index = inboxFiles.findIndex(obj => obj == activeFile); // We want the next file.
-			if (index < 0) {
-				index = -1;
+			let activeFileIndex = inboxFiles.findIndex(obj => obj == activeFile); // We want the next file.
+			if (activeFileIndex >= 0) {
+				index = activeFileIndex + 1
 			}
-			index++;
 		}
 
-		index = index % inboxFiles.length;
+		index %= inboxFiles.length;
 		this.app.workspace.getLeaf().openFile(inboxFiles[index]);
 	}
 
